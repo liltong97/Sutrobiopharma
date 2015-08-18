@@ -14,4 +14,11 @@ stdcurverow = 'A'
 stdcurveplate = 2
 
 def pullstdcurvedata(stdcurverow, stdcurveplate):
+    ''' Finds the herceptin curve data and returns it. Assumes that there
+    is a duplicate and it takes up 12 row'''
+    stdplatefirstladder = 
+    stdplatelastladder = 
+    df_stdplate = 
+    
+    
     
