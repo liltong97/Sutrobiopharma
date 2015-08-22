@@ -31,12 +31,29 @@ def pullstdcurvedata(stdcurverow, stdcurveplate, peakname):
     df_stdcurve = herceptinstdwells[allpeaks] 
     
     return df_stdcurve
+def calcavgstd(df_stdcurve):
+    """ Calculate the average of the two herceptin standard curve. Return an array
+    with the average values. """
+    avgcorrareas = []
+    stdcorrareas = df_stdcurve['Corr. Area']
+    if len(stdcorrareas) != 24:
+        if len(stdcorrareas) > 24:
+            print("You have extra peaks in your herceptin curve, wtf")
+        else:
+        #implement stuff
+    else:
+        for i in linspace(0, 11, 12):
+            avgcorrareas += [(stdcorrareas.iloc[i] + stdcorrareas.iloc[i+12]) / 2]
+
+    return avgcorrareas        
 
 def stdcurvequadfit(df_stdcurve, dispgraph):
-    ''' Fits a quadratic curve to the herceptin standard data''' 
+    ''' Fits a quadratic curve to the average of the herceptin standard data''' 
     fitdata = df_stdcurve['Corr. Area']
     x= [10, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] #doublecheck
+    avgstdcurve = calcavgstd(df_stdcurve)
     # do polyfit...
+    np.polyfit(x*2, , 2)
     
     if dispgraph:
         plot(x, fitdata)
