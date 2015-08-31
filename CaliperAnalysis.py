@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-def pullstdcurvedata(stdcurverow, stdcurveplate, peakname):
+def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     ''' Finds the herceptin curve data and returns it. Assumes that there
     is a duplicate on the next row and it takes up 12 wells/row'''
     
@@ -39,19 +39,22 @@ def findmissingwells(df):
     missingwells = []
     startingwell = wells.iloc[0]
     startingrow = startingwell[0]
-    startingcolumn = startwell[1:3]
+    startingcolumn = startingwell[1:3]
     if startingcolumn != '1':
-        for i in linspace(1, int(startingcolumn), int(startingcolumn)+1):
+        for i in np.linspace(1, int(startingcolumn), int(startingcolumn)+1):
             missingwells += [startingrow + str(i)]
         
     lastwell = wells.iloc[-1]
     theoreticalnumwells = int(lastwell[1:3]) - int(startingcolumn) + 12* (ord(lastwell[0]) - ord(startingrow))
-    for i in linspace(0, theoreticalnumwells-1, theoreticalnumwells):
-        currwellnum = i % 12
-        currwellrow = chr(ord(startingrow) + i/12)
-        currwell = str(currwellnum) + currwellrow
+    print(theoreticalnumwells)
+    
+    for i in np.linspace(0, theoreticalnumwells-1, theoreticalnumwells):
+        currwellnum = (i % 12)+1
+        currwellrow = chr(int(ord(startingrow) + i/12))
+        currwell = currwellrow + str(int(currwellnum))
         if not currwell in wells.values:
            missingwells += [currwell] 
+    return missingwells
       
       
 def calcavgstd(df_stdcurve):
@@ -63,9 +66,10 @@ def calcavgstd(df_stdcurve):
         if len(stdcorrareas) > 24:
             print("You have extra peaks in your herceptin curve, wtf")
         else:
-        #implement stuff
+            misswells = findmissingwells(df_stdcurve)
+        
     else:
-        for i in linspace(0, 11, 12):
+        for i in np.linspace(0, 11, 12):
             avgcorrareas += [(stdcorrareas.iloc[i] + stdcorrareas.iloc[i+12]) / 2]
     
 
@@ -84,7 +88,7 @@ def stdcurvequadfit(df_stdcurve, dispgraph):
         
         # plot fitted data ontop...
         
-def calculateconc(df, curvefitparam):
+#def calculateconc(df, curvefitparam):
     
     
 
@@ -95,7 +99,7 @@ df = pd.read_csv(fname, comment='#')
 stdcurverow = 'A'
 stdcurveplate = 2
 stdpeakname = 'IgG'
-stddata = pullstdcurvedata(stdcurverow, stdcurveplate, stdpeakname)
+stddata = pullstdcurvedata(df, stdcurverow, stdcurveplate, stdpeakname)
 
     
     
