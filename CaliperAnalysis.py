@@ -28,9 +28,32 @@ def pullstdcurvedata(stdcurverow, stdcurveplate, peakname):
     identifiedpeaks = herceptinstdwells['Type'] == peakname
     forcedpeaks = herceptinstdwells['Type'] == peakname + '*'
     allpeaks = identifiedpeaks | forcedpeaks
-    df_stdcurve = herceptinstdwells[allpeaks] 
+    df_stdcurve = herceptinstdwells[allpeaks]
     
     return df_stdcurve
+    
+def findmissingwells(df):
+    """ Will return an array of strings with which wells are missing in the 
+    dataframe passed using the Sample Name column."""
+    wells = df['Sample Name']
+    missingwells = []
+    startingwell = wells.iloc[0]
+    startingrow = startingwell[0]
+    startingcolumn = startwell[1:3]
+    if startingcolumn != '1':
+        for i in linspace(1, int(startingcolumn), int(startingcolumn)+1):
+            missingwells += [startingrow + str(i)]
+        
+    lastwell = wells.iloc[-1]
+    theoreticalnumwells = int(lastwell[1:3]) - int(startingcolumn) + 12* (ord(lastwell[0]) - ord(startingrow))
+    for i in linspace(0, theoreticalnumwells-1, theoreticalnumwells):
+        currwellnum = i % 12
+        currwellrow = chr(ord(startingrow) + i/12)
+        currwell = str(currwellnum) + currwellrow
+        if not currwell in wells.values:
+           missingwells += [currwell] 
+      
+      
 def calcavgstd(df_stdcurve):
     """ Calculate the average of the two herceptin standard curve. Return an array
     with the average values. """
@@ -44,6 +67,7 @@ def calcavgstd(df_stdcurve):
     else:
         for i in linspace(0, 11, 12):
             avgcorrareas += [(stdcorrareas.iloc[i] + stdcorrareas.iloc[i+12]) / 2]
+    
 
     return avgcorrareas        
 
@@ -53,7 +77,7 @@ def stdcurvequadfit(df_stdcurve, dispgraph):
     x= [10, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] #doublecheck
     avgstdcurve = calcavgstd(df_stdcurve)
     # do polyfit...
-    np.polyfit(x*2, , 2)
+    np.polyfit(x, avgstdcurve , 2)
     
     if dispgraph:
         plot(x, fitdata)
