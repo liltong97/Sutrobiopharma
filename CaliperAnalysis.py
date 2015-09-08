@@ -97,18 +97,18 @@ def stdcurvequadfit(df_stdcurve, dispgraph):
     x = np.array([1000, 800, 600, 400, 200, 150, 100, 80, 60 ,40, 20, 10])
     avgstdcurve = calcavgstd(df_stdcurve)
     # do polyfit...
-    fitparams = np.polyfit(x, avgstdcurve , 2)
-    print(fitparams)
+    fitparams = np.polyfit(avgstdcurve, x, 2)
     
     if dispgraph:
-        fit = x**2 * fitparams[0] + x * fitparams[1] + fitparams[2]
+        fit = avgstdcurve**2 * fitparams[0] + avgstdcurve * fitparams[1] + fitparams[2]
 
-        plt.plot(x, avgstdcurve, 'k.')
-        plt.plot(x, fit)
+        plt.plot(avgstdcurve, x, 'k.')
+        plt.plot(avgstdcurve, fit)
+        plt.xlabel('Corr. Area')
+        plt.ylabel('Std Protein Concentration')
         plt.show()
-
         
-        # plot fitted data ontop...
+    return fitparams
         
 #def calculateconc(df, curvefitparam):
     
@@ -122,7 +122,7 @@ stdcurverow = 'A'
 stdcurveplate = 2
 stdpeakname = 'IgG'
 stddata = pullstdcurvedata(df, stdcurverow, stdcurveplate, stdpeakname)
-stdcurvequadfit(stddata, True)
+equationparams = stdcurvequadfit(stddata, True)
     
     
     
