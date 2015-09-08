@@ -23,7 +23,7 @@ def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     lastwellofstd = df_afterstart['Sample Name'] ==chr(ord(stdcurverow.upper())+1) +'12'
     lastwellindices =  df_afterstart[lastwellofstd].index.tolist()
     ilocendindex = lastwellindices[-1]
-    herceptinstdwells = df.iloc[ilocstartindex:ilocendindex]  
+    herceptinstdwells = df.iloc[ilocstartindex:(ilocendindex+1)]  
     
     # pull out desired peaks 
     identifiedpeaks = herceptinstdwells['Type'] == peakname
@@ -80,7 +80,6 @@ def calcavgstd(df_stdcurve):
                 row1val += [np.nan]
             else:
                 temp = df_stdcurve[df_stdcurve['Sample Name'] == currwell1]
-                print(temp)
                 row1val += [temp['Corr. Area'].iloc[0]]
                 
             if currwell2 in missingwells:
@@ -95,13 +94,19 @@ def calcavgstd(df_stdcurve):
 def stdcurvequadfit(df_stdcurve, dispgraph):
     ''' Fits a quadratic curve to the average of the herceptin standard data''' 
     fitdata = df_stdcurve['Corr. Area']
-    x= [10, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] #doublecheck
+    x = np.array([1000, 800, 600, 400, 200, 150, 100, 80, 60 ,40, 20, 10])
     avgstdcurve = calcavgstd(df_stdcurve)
     # do polyfit...
-    np.polyfit(x, avgstdcurve , 2)
+    fitparams = np.polyfit(x, avgstdcurve , 2)
+    print(fitparams)
     
     if dispgraph:
-        plot(x, fitdata)
+        fit = x**2 * fitparams[0] + x * fitparams[1] + fitparams[2]
+
+        plt.plot(x, avgstdcurve, 'k.')
+        plt.plot(x, fit)
+        plt.show()
+
         
         # plot fitted data ontop...
         
@@ -117,7 +122,7 @@ stdcurverow = 'A'
 stdcurveplate = 2
 stdpeakname = 'IgG'
 stddata = pullstdcurvedata(df, stdcurverow, stdcurveplate, stdpeakname)
-
+stdcurvequadfit(stddata, True)
     
     
     
