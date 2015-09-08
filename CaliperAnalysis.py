@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import scipy.stats as stats
 
 def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     ''' Finds the herceptin curve data and returns it. Assumes that there
@@ -34,7 +35,7 @@ def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     
 def findmissingwells(df):
     """ Will return an array of strings with which wells are missing in the 
-    dataframe passed using the Sample Name column."""
+    dataframe passed using the Sample Name column. Assuming full rows!!"""
     wells = df['Sample Name']
     missingwells = []
     startingwell = wells.iloc[0]
@@ -45,12 +46,11 @@ def findmissingwells(df):
             missingwells += [startingrow + str(i)]
         
     lastwell = wells.iloc[-1]
-    theoreticalnumwells = int(lastwell[1:3]) - int(startingcolumn) + 12* (ord(lastwell[0]) - ord(startingrow))
-    print(theoreticalnumwells)
+    theoreticalnumwells = 12* (ord(lastwell[0]) - ord(startingrow)+1)
     
-    for i in np.linspace(0, theoreticalnumwells-1, theoreticalnumwells):
-        currwellnum = (i % 12)+1
-        currwellrow = chr(int(ord(startingrow) + i/12))
+    for j in np.linspace(0, theoreticalnumwells-1, theoreticalnumwells):
+        currwellnum = (j % 12)+1
+        currwellrow = chr(int(ord(startingrow) + j/12))
         currwell = currwellrow + str(int(currwellnum))
         if not currwell in wells.values:
            missingwells += [currwell] 
@@ -62,17 +62,34 @@ def calcavgstd(df_stdcurve):
     with the average values. """
     avgcorrareas = []
     stdcorrareas = df_stdcurve['Corr. Area']
-    if len(stdcorrareas) != 24:
-        if len(stdcorrareas) > 24:
-            print("You have extra peaks in your herceptin curve, wtf")
-        else:
-            misswells = findmissingwells(df_stdcurve)
-        
+    if len(stdcorrareas) > 24:
+        print("You have extra peaks in your herceptin curve, wtf")
     else:
+        missingwells = findmissingwells(df_stdcurve)
+        startingwell = df_stdcurve['Sample Name'].iloc[0]   
+        row1 = startingwell[0]
+        row2 = chr(int(ord(startingwell[0]) + 1))
+        row1val = []
+        row2val = []
         for i in np.linspace(0, 11, 12):
-            avgcorrareas += [(stdcorrareas.iloc[i] + stdcorrareas.iloc[i+12]) / 2]
-    
-
+            currwellnum = int((i % 12))+1
+            currwell1 = row1 + str(currwellnum)
+            currwell2 = row2 + str(currwellnum)
+            
+            if currwell1 in missingwells:
+                row1val += [np.nan]
+            else:
+                temp = df_stdcurve[df_stdcurve['Sample Name'] == currwell1]
+                print(temp)
+                row1val += [temp['Corr. Area'].iloc[0]]
+                
+            if currwell2 in missingwells:
+                row2val += [np.nan]
+            else:
+                temp = df_stdcurve[df_stdcurve['Sample Name'] == currwell2]
+                row2val += [temp['Corr. Area'].iloc[0]]    
+        corrareas = np.array([row1val, row2val])
+        avgcorrareas = stats.nanmean(corrareas)
     return avgcorrareas        
 
 def stdcurvequadfit(df_stdcurve, dispgraph):
