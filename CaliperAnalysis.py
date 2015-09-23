@@ -93,17 +93,35 @@ def calcavgstd(df_stdcurve):
 
 def stdcurvequadfit(df_stdcurve, dispgraph):
     ''' Fits a quadratic curve to the average of the herceptin standard data''' 
-    fitdata = df_stdcurve['Corr. Area']
+    
     x = np.array([1000, 800, 600, 400, 200, 150, 100, 80, 60 ,40, 20, 10])
     avgstdcurve = calcavgstd(df_stdcurve)
+    avgstdcurvetrim = avgstdcurve
+    #indices = [i for i, x in enumerate(avgstdcurve) if np.isnan(x)]
+    print(avgstdcurve)
+    #test = [j for k, j in enumerate(x) if k not in indices]
+    counter =0
+    for j in np.linspace(0, len(avgstdcurve)-1, len(avgstdcurve)):
+        if np.isnan(avgstdcurve[j]):
+            x= np.delete(x, j-counter)
+            print(x)
+            print(j)
+            print(counter)
+            avgstdcurvetrim = np.delete(avgstdcurvetrim, j-counter)
+            counter= counter + 1
+        
+    print(x)
+            
+        
+
     # do polyfit...
-    fitparams = np.polyfit(avgstdcurve, x, 2)
+    fitparams = np.polyfit(avgstdcurvetrim, x, 2)
     
     if dispgraph:
-        fit = avgstdcurve**2 * fitparams[0] + avgstdcurve * fitparams[1] + fitparams[2]
+        fit = avgstdcurvetrim**2 * fitparams[0] + avgstdcurvetrim * fitparams[1] + fitparams[2]
 
-        plt.plot(avgstdcurve, x, 'k.')
-        plt.plot(avgstdcurve, fit)
+        plt.plot(avgstdcurvetrim, x, 'k.')
+        plt.plot(avgstdcurvetrim, fit)
         plt.xlabel('Corr. Area')
         plt.ylabel('Std Protein Concentration')
         plt.show()
@@ -111,6 +129,7 @@ def stdcurvequadfit(df_stdcurve, dispgraph):
     return fitparams
         
 #def calculateconc(df, curvefitparam):
+    
     
     
 
