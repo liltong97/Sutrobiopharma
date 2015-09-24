@@ -98,21 +98,13 @@ def stdcurvequadfit(df_stdcurve, dispgraph):
     avgstdcurve = calcavgstd(df_stdcurve)
     avgstdcurvetrim = avgstdcurve
     #indices = [i for i, x in enumerate(avgstdcurve) if np.isnan(x)]
-    print(avgstdcurve)
     #test = [j for k, j in enumerate(x) if k not in indices]
     counter =0
     for j in np.linspace(0, len(avgstdcurve)-1, len(avgstdcurve)):
         if np.isnan(avgstdcurve[j]):
             x= np.delete(x, j-counter)
-            print(x)
-            print(j)
-            print(counter)
             avgstdcurvetrim = np.delete(avgstdcurvetrim, j-counter)
-            counter= counter + 1
-        
-    print(x)
-            
-        
+            counter= counter + 1               
 
     # do polyfit...
     fitparams = np.polyfit(avgstdcurvetrim, x, 2)
