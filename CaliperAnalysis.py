@@ -24,6 +24,9 @@ def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     lastwellindices =  df_afterstart[lastwellofstd].index.tolist()
     ilocendindex = lastwellindices[-1]
     herceptinstdwells = df.iloc[ilocstartindex:(ilocendindex+1)]  
+    notherceptinstdwells1 = df.iloc[0:ilocstartindex]
+    notherceptinstdwells2 = df.iloc[ilocendindex:] # right index?
+    notherceptinstdwells = pd.concat([notherceptinstdwells1, notherceptinstdwells2])
     
     # pull out desired peaks 
     identifiedpeaks = herceptinstdwells['Type'] == peakname
@@ -31,7 +34,7 @@ def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     allpeaks = identifiedpeaks | forcedpeaks
     df_stdcurve = herceptinstdwells[allpeaks]
     
-    return df_stdcurve
+    return df_stdcurve, notherceptinstdwells
     
 def findmissingwells(df):
     """ Will return an array of strings with which wells are missing in the 
@@ -119,21 +122,38 @@ def stdcurvequadfit(df_stdcurve, dispgraph):
         plt.show()
         
     return fitparams
-        
-#def calculateconc(df, curvefitparam):
     
+def pulldata(notstddata, peakname):
+    # pull out desired peaks 
+    identifiedpeaks = notstddata['Type'] == peakname
+    forcedpeaks = notstddata['Type'] == peakname + '*'
+    allpeaks = identifiedpeaks | forcedpeaks
+    sampledata = notstddata[allpeaks]
     
-    
+    return sampledata
 
+def calculateconc(sampledata, curvefitparam):
+    sampcorrarea = sampledata['Corr. Area']
+    concentrations = curvefitparam[0]*sampcorrarea**2 + curvefitparam[1] *sampcorrarea + curvefitparam[2]
+    return concentrations
 
-fname = '..\ltong\Documents\Python test runs\CaliperPeakTable.csv'
-df = pd.read_csv(fname, comment='#')
+def nMcalcconc(concentrations, df_scaff):
+    conversions = {'IgG': 150000, 'GFP': 28000, 'scfvfc': 100000, 'scfv': 23000}
+    scaff = df_scaff['Scaffold']
+    nMconc = concentrations / conversions[scaff]
+    
+fname_raw = '..\ltong\Documents\GitHub\Sutrobiopharma\CaliperPeakTable.csv'
+df_raw = pd.read_csv(fname_raw, comment='#')
+fname_scaff = '..\ltong\Documents\GitHub\Sutrobiopharma\scaffold.csv'
+df_scaff = pd.read_csv(fname_scaff, comment='#')
 
 stdcurverow = 'A'
 stdcurveplate = 2
 stdpeakname = 'IgG'
-stddata = pullstdcurvedata(df, stdcurverow, stdcurveplate, stdpeakname)
+stddata, notstddata = pullstdcurvedata(df_raw, stdcurverow, stdcurveplate, stdpeakname)
 equationparams = stdcurvequadfit(stddata, True)
-    
+sampledata = pulldata(notstddata, stdpeakname)
+conc = calculateconc(sampledata, equationparams)
+
     
     
