@@ -132,15 +132,17 @@ def pulldata(notstddata, peakname):
     
     return sampledata
 
-def calculateconc(sampledata, curvefitparam):
+def calculateconc(sampledata, curvefitparam, df_scaff):
     sampcorrarea = sampledata['Corr. Area']
     concentrations = curvefitparam[0]*sampcorrarea**2 + curvefitparam[1] *sampcorrarea + curvefitparam[2]
-    return concentrations
-
-def nMcalcconc(concentrations, df_scaff):
     conversions = {'IgG': 150000, 'GFP': 28000, 'scfvfc': 100000, 'scfv': 23000}
-    scaff = df_scaff['Scaffold']
-    nMconc = concentrations / conversions[scaff]
+    combineddf = pd.merge(sampledata, df_scaff, on=['Well Label'])
+    combineddf = combineddf.replace({"Scaffold":conversions})
+    nMconc = []
+    for i in np.linspace(0, len(combineddf)-1, len(combineddf)):
+        nMconc += [concentrations.iloc[i] / combineddf['Scaffold'].iloc[i].astype(float)]
+    return nMconc
+
     
 fname_raw = '..\ltong\Documents\GitHub\Sutrobiopharma\CaliperPeakTable.csv'
 df_raw = pd.read_csv(fname_raw, comment='#')
@@ -153,7 +155,7 @@ stdpeakname = 'IgG'
 stddata, notstddata = pullstdcurvedata(df_raw, stdcurverow, stdcurveplate, stdpeakname)
 equationparams = stdcurvequadfit(stddata, True)
 sampledata = pulldata(notstddata, stdpeakname)
-conc = calculateconc(sampledata, equationparams)
+conc = calculateconc(sampledata, equationparams,df_scaff)
 
     
     
