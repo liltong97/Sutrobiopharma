@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
+import xlsxwriter
 
 def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     ''' Finds the herceptin curve data and returns it. Assumes that there
@@ -36,7 +37,7 @@ def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     
     return df_stdcurve, notherceptinstdwells
     
-def findmissingwells(df):
+def findmissingwells(df, wholeplate):
     """ Will return an array of strings with which wells are missing in the 
     dataframe passed using the Sample Name column. Assuming full rows!!"""
     wells = df['Sample Name']
@@ -48,7 +49,10 @@ def findmissingwells(df):
         for i in np.linspace(1, int(startingcolumn), int(startingcolumn)+1):
             missingwells += [startingrow + str(i)]
         
-    lastwell = wells.iloc[-1]
+    if wholeplate:
+        lastwell = 'H12'
+    else:
+        lastwell = wells.iloc[-1]
     theoreticalnumwells = 12* (ord(lastwell[0]) - ord(startingrow)+1)
     
     for j in np.linspace(0, theoreticalnumwells-1, theoreticalnumwells):
@@ -68,7 +72,7 @@ def calcavgstd(df_stdcurve):
     if len(stdcorrareas) > 24:
         print("You have extra peaks in your herceptin curve, wtf")
     else:
-        missingwells = findmissingwells(df_stdcurve)
+        missingwells = findmissingwells(df_stdcurve, False)
         startingwell = df_stdcurve['Sample Name'].iloc[0]   
         row1 = startingwell[0]
         row2 = chr(int(ord(startingwell[0]) + 1))
@@ -135,13 +139,18 @@ def pulldata(notstddata, peakname):
 def calculateconc(sampledata, curvefitparam, df_scaff):
     sampcorrarea = sampledata['Corr. Area']
     concentrations = curvefitparam[0]*sampcorrarea**2 + curvefitparam[1] *sampcorrarea + curvefitparam[2]
-    conversions = {'IgG': 150000, 'GFP': 28000, 'scfvfc': 100000, 'scfv': 23000}
+    conversions = {'IgG': 150000, 'GFP': 28000, 'scfvfc': 100000, 'scfv': 23000, 'IgG*':150000}
     combineddf = pd.merge(sampledata, df_scaff, on=['Well Label'])
     combineddf = combineddf.replace({"Scaffold":conversions})
+    conc =  []
     nMconc = []
     for i in np.linspace(0, len(combineddf)-1, len(combineddf)):
-        nMconc += [concentrations.iloc[i] / combineddf['Scaffold'].iloc[i].astype(float)]
-    return nMconc
+        nMconc += [(concentrations.iloc[i] / combineddf['Scaffold'].iloc[i].astype(float)) * 10**6]
+        conc += [concentrations.iloc[i]]
+    combineddf['[IgG], ug/mL'] = conc
+    combineddf['nM'] = nMconc
+
+    return combineddf
 
     
 fname_raw = '..\ltong\Documents\GitHub\Sutrobiopharma\CaliperPeakTable.csv'
@@ -155,7 +164,27 @@ stdpeakname = 'IgG'
 stddata, notstddata = pullstdcurvedata(df_raw, stdcurverow, stdcurveplate, stdpeakname)
 equationparams = stdcurvequadfit(stddata, True)
 sampledata = pulldata(notstddata, stdpeakname)
-conc = calculateconc(sampledata, equationparams,df_scaff)
+fulldf = calculateconc(sampledata, equationparams,df_scaff)
+trimmeddf = pd.concat([fulldf['Well Label'], fulldf['Sample Name'], fulldf['Variant ID'], fulldf['Type'], fulldf['[IgG], ug/mL'], fulldf['nM']], axis=1)
 
+addwells = findmissingwells(trimmeddf, True)
+
+for i in range(len(addwells)):
+    sample = addwells[i]
+    if len(sample) == 2:
+        welllabel= sample[0] + '0' + sample[1]
+    else:
+        welllabel = sample
+    a=df_scaff[df_scaff['Well Label'] == welllabel]
+    varID = a['Variant ID'].iloc[0]
+    scaff = a['Scaffold'].iloc[0]
+    trimmeddf.loc[i+len(trimmeddf)] = [welllabel, sample, varID, scaff, 'Not Detected', 0]
     
+exportdf = trimmeddf.sort(['Well Label'])
     
+# Getting dumped: C:\Users\ltong
+writer = pd.ExcelWriter('simple.xlsx', engine='xlsxwriter')
+exportdf.to_excel(writer, sheet_name='Sheet1')
+writer.save()
+
+
