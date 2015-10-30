@@ -46,7 +46,6 @@ def findmissingwells(df, wholeplate):
     startingwell = wells.iloc[0]
     startingrow = startingwell[0]
     startingcolumn = startingwell[1:3]
-    print(startingcolumn)
     if startingcolumn != '1':
         for i in np.linspace(1, int(startingcolumn)-1, int(startingcolumn)-1):
             missingwells += [startingrow + str(int(i))]
