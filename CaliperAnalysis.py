@@ -8,6 +8,8 @@ import numpy as np
 import scipy.stats as stats
 import xlsxwriter
 import Tkinter
+import tkFileDialog
+pd.options.mode.chained_assignment = None
 
 def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     ''' Finds the herceptin curve data and returns it. Assumes that there
@@ -141,7 +143,6 @@ def calculateconc(sampledata, curvefitparam, df_scaff):
     concentrations = curvefitparam[0]*sampcorrarea**2 + curvefitparam[1] *sampcorrarea + curvefitparam[2]
     conversions = {'IgG': 150000, 'GFP': 28000, 'scFvFc': 100000, 'scfv': 23000}
     combineddf_full = pd.merge(sampledata, df_scaff, on=['Well Label'])
-    #combineddf_full = combineddf_full.replace({"Scaffold":conversions})
     conc =  []
     nMconc = []
     for i in np.linspace(0, len(combineddf_full)-1, len(combineddf_full)):
@@ -153,56 +154,91 @@ def calculateconc(sampledata, curvefitparam, df_scaff):
 
     return combineddf_full
 
-top = Tkinter.Tk()
-top.mainloop()
+def notdetectedaddition(addwells, df_scaff, finaldf):
+    for i in range(len(addwells)):
+        sample = addwells[i]
+        if len(sample) == 2:
+            welllabel= sample[0] + '0' + sample[1]
+        else:
+            welllabel = sample
+        a=df_scaff[df_scaff['Well Label'] == welllabel]
+        varID = a['Variant ID'].iloc[0]
+        scaff = a['Scaffold'].iloc[0]
+        finaldf.loc[i+len(finaldf)] = [welllabel, sample, varID, scaff, scaff, 'Not Detected', 0]
+    finaldf=finaldf.sort(['Well Label'])
+    return finaldf
+    
+def loadscaffname(): 
+    df_scaff_name.set(tkFileDialog.askopenfilename(filetypes =( ("csv files", ".csv"), ("all files", "*.*"))))
+    return df_scaff_name
+    
+def loadpeakname(): 
+    peak_table_name.set(tkFileDialog.askopenfilename(filetypes =( ("csv files", ".csv"), ("all files", "*.*"))))
+    return peak_table_name
+    
+def close_window():
+    tk.destroy()
+    
+    
+tk = Tkinter.Tk()
+frame = Tkinter.Frame(tk, padx=3, pady=4)
+frame.grid(column=0, row=0)
+tk.title("Caliper Concentration Calculator")
+df_scaff_name = Tkinter.StringVar()
+peak_table_name = Tkinter.StringVar()
 
-fname_raw = '..\ltong\Documents\Caliper Data\Raw Data\pHexpsamples_2015-10-22_03-27-53_PeakTable.csv'
+Tkinter.Label(frame, text='Scaffold File').grid(row=0)
+Tkinter.Button(frame, text = "Browse", command = loadscaffname).grid(row=0, column=1)
+Tkinter.Label(frame, text='Peak Table File').grid(row=1)
+Tkinter.Button(frame, text = "Browse", command = loadpeakname).grid(row=1, column=1)
+
+stdrow_tk = Tkinter.StringVar()
+stdcurveplate_tk = Tkinter.StringVar()
+stdpeakname_tk = Tkinter.StringVar()
+Tkinter.Label(frame, text='Standard Curve Info:').grid(row=2, columnspan=2, pady=6, sticky='W')
+
+Tkinter.Label(frame, text='Starting row').grid(row=3, sticky='W')
+stdrow_entry = Tkinter.Entry(frame, width=7, textvariable=stdrow_tk).grid(row=3, column=1, sticky='W')
+Tkinter.Label(frame, text='Plate').grid(row=4, sticky='W')
+stdcurveplate_entry = Tkinter.Entry(frame, width=7, textvariable=stdcurveplate_tk).grid(row=4, column=1, sticky='W')
+Tkinter.Label(frame, text='Peak name').grid(row=5, sticky='W')
+stdpeakname_entry = Tkinter.Entry(frame, width=7, textvariable=stdpeakname_tk).grid(row=5, column=1, sticky='W')
+
+Tkinter.Button(frame, text="Calculate", command= close_window).grid(column=3, row=6, sticky='E')
+
+
+tk.mainloop()
+
+
+fname_raw = peak_table_name.get()
 df_raw = pd.read_csv(fname_raw, comment='#')
-fname_scaff = '..\ltong\Documents\Caliper Data\Raw Data\scaffold_1988.csv'
+fname_scaff = df_scaff_name.get()
 df_scaff = pd.read_csv(fname_scaff, comment='#')
 
-stdcurverow = 'G'
-stdcurveplate = 2
-stdpeakname = 'IgG'
+stdcurverow = stdrow_tk.get()
+stdcurveplate = int(stdcurveplate_tk.get())
+stdpeakname = stdpeakname_tk.get()
 stddata, notstddata = pullstdcurvedata(df_raw, stdcurverow, stdcurveplate, stdpeakname)
-equationparams = stdcurvequadfit(stddata, True)
+equationparams = stdcurvequadfit(stddata, False)
 sampledata = pulldata(notstddata, df_scaff)
 fulldf = calculateconc(sampledata, equationparams,df_scaff)
 trimmeddf = pd.concat([fulldf['Well Label'], fulldf['Sample Name'], fulldf['Variant ID'], fulldf['Scaffold'], fulldf['Type'].str.rstrip('*'), fulldf['[IgG], ug/mL'], fulldf['nM']], axis=1)
 
 addwells = findmissingwells(trimmeddf, True)
 
-for i in range(len(addwells)):
-    sample = addwells[i]
-    if len(sample) == 2:
-        welllabel= sample[0] + '0' + sample[1]
-    else:
-        welllabel = sample
-    a=df_scaff[df_scaff['Well Label'] == welllabel]
-    varID = a['Variant ID'].iloc[0]
-    scaff = a['Scaffold'].iloc[0]
-    trimmeddf.loc[i+len(trimmeddf)] = [welllabel, sample, varID, scaff, scaff, 'Not Detected', 0]
+trimmeddf = notdetectedaddition(addwells, df_scaff, trimmeddf)
 desiredscaffind = trimmeddf['Scaffold'] == trimmeddf['Type']
 exportdf_trim = trimmeddf[desiredscaffind]
 addwells2 = findmissingwells(exportdf_trim, True)
-for i in range(len(addwells2)):
-    sample = addwells2[i]
-    if len(sample) == 2:
-        welllabel= sample[0] + '0' + sample[1]
-    else:
-        welllabel = sample
-    a=df_scaff[df_scaff['Well Label'] == welllabel]
-    varID = a['Variant ID'].iloc[0]
-    scaff = a['Scaffold'].iloc[0]
-    exportdf_trim.loc[i+len(exportdf_trim)] = [welllabel, sample, varID, scaff, scaff, 'Not Detected', 0]
-exportdf = exportdf_trim.sort(['Well Label'])
+exportdf= notdetectedaddition(addwells2, df_scaff, exportdf_trim)
+
 del exportdf['Type']
-exportdf_full = trimmeddf.sort(['Well Label'])
+
     
 # Getting dumped: C:\Users\ltong
 writer = pd.ExcelWriter('simple.xlsx', engine='xlsxwriter')
 exportdf.to_excel(writer, sheet_name='Sheet1')
-exportdf_full.to_excel(writer, sheet_name='Sheet2')
+trimmeddf.to_excel(writer, sheet_name='Sheet2')
 writer.save()
 
 
