@@ -9,6 +9,8 @@ import scipy.stats as stats
 import xlsxwriter
 import Tkinter
 import tkFileDialog
+import os
+
 pd.options.mode.chained_assignment = None
 
 def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
@@ -195,6 +197,7 @@ Tkinter.Button(frame, text = "Browse", command = loadpeakname).grid(row=1, colum
 stdrow_tk = Tkinter.StringVar()
 stdcurveplate_tk = Tkinter.StringVar()
 stdpeakname_tk = Tkinter.StringVar()
+filename_tk = Tkinter.StringVar()
 Tkinter.Label(frame, text='Standard Curve Info:').grid(row=2, columnspan=2, pady=6, sticky='W')
 
 Tkinter.Label(frame, text='Starting row').grid(row=3, sticky='W')
@@ -204,8 +207,10 @@ stdcurveplate_entry = Tkinter.Entry(frame, width=7, textvariable=stdcurveplate_t
 Tkinter.Label(frame, text='Peak name').grid(row=5, sticky='W')
 stdpeakname_entry = Tkinter.Entry(frame, width=7, textvariable=stdpeakname_tk).grid(row=5, column=1, sticky='W')
 
-Tkinter.Button(frame, text="Calculate", command= close_window).grid(column=3, row=6, sticky='E')
+Tkinter.Label(frame, text='File name').grid(row=6, sticky='W')
+filename_entry = Tkinter.Entry(frame, width=20, textvariable=filename_tk).grid(row=6, column=1, pady = 12, sticky='W')
 
+Tkinter.Button(frame, text="Calculate", command= close_window).grid(column=3, row=7, sticky='E')
 
 tk.mainloop()
 
@@ -234,11 +239,17 @@ exportdf= notdetectedaddition(addwells2, df_scaff, exportdf_trim)
 
 del exportdf['Type']
 
-    
+
 # Getting dumped: C:\Users\ltong
-writer = pd.ExcelWriter('simple.xlsx', engine='xlsxwriter')
+filename = filename_tk.get() + '.xlsx'
+writer = pd.ExcelWriter(filename, engine='xlsxwriter')
 exportdf.to_excel(writer, sheet_name='Sheet1')
 trimmeddf.to_excel(writer, sheet_name='Sheet2')
+workbook = writer.book
+worksheet1 = writer.sheets['Sheet1']
+worksheet2 = writer.sheets['Sheet2']
+worksheet1.conditional_format('G2:G98', {'type': '3_color_scale', 'min_color': '#008000', 'max_color' : '#FF0000'})
+worksheet2.conditional_format('H2:H98', {'type': '3_color_scale', 'min_color': '#008000', 'max_color' : '#FF0000'})
 writer.save()
 
 
