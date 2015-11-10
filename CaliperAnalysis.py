@@ -12,6 +12,7 @@ import tkFileDialog
 import os
 
 pd.options.mode.chained_assignment = None
+# -*- coding: utf-8 -*-
 
 def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     ''' Finds the herceptin curve data and returns it. Assumes that there
@@ -67,7 +68,18 @@ def findmissingwells(df, wholeplate):
            missingwells += [currwell] 
     return list(set(missingwells))
       
-      
+def findblankwells(df, df_scaff):
+    """Will return an array of strings with which wells are blank or missing the desired peak
+    in the dataframe compared to the scaffold file."""
+    wells = df_scaff['Well Label']
+    missingwells = []
+    for i in np.linspace(0, len(wells)-1, len(wells)):
+        currwell = wells.iloc[i]
+        if not currwell in df['Well Label'].values:
+           missingwells += [currwell] 
+    return list(set(missingwells))    
+    
+    
 def calcavgstd(df_stdcurve):
     """ Calculate the average of the two herceptin standard curve. Return an array
     with the average values. """
@@ -143,7 +155,7 @@ def pulldata(notstddata, scaff):
 def calculateconc(sampledata, curvefitparam, df_scaff):
     sampcorrarea = sampledata['Corr. Area']
     concentrations = curvefitparam[0]*sampcorrarea**2 + curvefitparam[1] *sampcorrarea + curvefitparam[2]
-    conversions = {'IgG': 150000, 'GFP': 28000, 'scFvFc': 100000, 'scfv': 23000}
+    conversions = {'IgG': 150000, 'GFP': 28000, 'scFvFc': 100000, 'scfv': 23000, 'stump':75000}
     combineddf_full = pd.merge(sampledata, df_scaff, on=['Well Label'])
     conc =  []
     nMconc = []
@@ -166,7 +178,7 @@ def notdetectedaddition(addwells, df_scaff, finaldf):
         a=df_scaff[df_scaff['Well Label'] == welllabel]
         varID = a['Variant ID'].iloc[0]
         scaff = a['Scaffold'].iloc[0]
-        finaldf.loc[i+len(finaldf)] = [welllabel, sample, varID, scaff, scaff, 'Not Detected', 0]
+        finaldf.loc[i+len(finaldf)] = [welllabel, sample, varID, scaff, scaff, 'Not Detected', 0, 'N/A']
     finaldf=finaldf.sort(['Well Label'])
     return finaldf
     
@@ -199,6 +211,8 @@ stdcurveplate_tk = Tkinter.StringVar()
 stdpeakname_tk = Tkinter.StringVar()
 filename_tk = Tkinter.StringVar()
 Tkinter.Label(frame, text='Standard Curve Info:').grid(row=2, columnspan=2, pady=6, sticky='W')
+displaygraph = Tkinter.BooleanVar()
+check = Tkinter.Checkbutton(tk, text='Display Curve Fit?', variable=displaygraph, onvalue=True, offvalue=False).grid(row=8, column = 0, sticky='E')
 
 Tkinter.Label(frame, text='Starting row').grid(row=3, sticky='W')
 stdrow_entry = Tkinter.Entry(frame, width=7, textvariable=stdrow_tk).grid(row=3, column=1, sticky='W')
@@ -210,6 +224,7 @@ stdpeakname_entry = Tkinter.Entry(frame, width=7, textvariable=stdpeakname_tk).g
 Tkinter.Label(frame, text='File name').grid(row=6, sticky='W')
 filename_entry = Tkinter.Entry(frame, width=20, textvariable=filename_tk).grid(row=6, column=1, pady = 12, sticky='W')
 
+
 Tkinter.Button(frame, text="Calculate", command= close_window).grid(column=3, row=7, sticky='E')
 
 tk.mainloop()
@@ -218,23 +233,24 @@ tk.mainloop()
 fname_raw = peak_table_name.get()
 df_raw = pd.read_csv(fname_raw, comment='#')
 fname_scaff = df_scaff_name.get()
-df_scaff = pd.read_csv(fname_scaff, comment='#')
+scaff = pd.read_csv(fname_scaff, comment='#')
+df_scaff = scaff.dropna()
 
 stdcurverow = stdrow_tk.get()
 stdcurveplate = int(stdcurveplate_tk.get())
 stdpeakname = stdpeakname_tk.get()
 stddata, notstddata = pullstdcurvedata(df_raw, stdcurverow, stdcurveplate, stdpeakname)
-equationparams = stdcurvequadfit(stddata, False)
+equationparams = stdcurvequadfit(stddata, displaygraph.get())
 sampledata = pulldata(notstddata, df_scaff)
 fulldf = calculateconc(sampledata, equationparams,df_scaff)
-trimmeddf = pd.concat([fulldf['Well Label'], fulldf['Sample Name'], fulldf['Variant ID'], fulldf['Scaffold'], fulldf['Type'].str.rstrip('*'), fulldf['[IgG], ug/mL'], fulldf['nM']], axis=1)
+trimmeddf = pd.concat([fulldf['Well Label'], fulldf['Sample Name'], fulldf['Variant ID'], fulldf['Scaffold'], fulldf['Type'].str.rstrip('*'), fulldf['[IgG], ug/mL'], fulldf['nM'], fulldf['% Purity']], axis=1)
 
-addwells = findmissingwells(trimmeddf, True)
+addwells = findblankwells(trimmeddf, df_scaff)
 
 trimmeddf = notdetectedaddition(addwells, df_scaff, trimmeddf)
 desiredscaffind = trimmeddf['Scaffold'] == trimmeddf['Type']
 exportdf_trim = trimmeddf[desiredscaffind]
-addwells2 = findmissingwells(exportdf_trim, True)
+addwells2 = findblankwells(exportdf_trim, df_scaff)
 exportdf= notdetectedaddition(addwells2, df_scaff, exportdf_trim)
 
 del exportdf['Type']
