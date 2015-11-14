@@ -21,7 +21,7 @@ def pullstdcurvedata(df, stdcurverow, stdcurveplate, peakname):
     startwell = stdcurverow.upper() + '1'
     # Find start of herceptin curve
     rowpos = df['Sample Name'] == startwell
-    startrowpos = df[rowpos]['Type']=='?' # every well starts with a ? peak
+    startrowpos = df[rowpos]['Type']=='LM' # every well starts with a LM peak
     startingstdindex= df[rowpos][startrowpos].index.tolist()
     ilocstartindex= startingstdindex[stdcurveplate-1]
     df_afterstart = df.iloc[ilocstartindex:]
@@ -189,7 +189,11 @@ def loadscaffname():
 def loadpeakname(): 
     peak_table_name.set(tkFileDialog.askopenfilename(filetypes =( ("csv files", ".csv"), ("all files", "*.*"))))
     return peak_table_name
-    
+
+def choosesavelocation(): 
+    savelocation.set(tkFileDialog.askdirectory())
+    return savelocation   
+
 def close_window():
     tk.destroy()
     
@@ -200,11 +204,16 @@ frame.grid(column=0, row=0)
 tk.title("Caliper Concentration Calculator")
 df_scaff_name = Tkinter.StringVar()
 peak_table_name = Tkinter.StringVar()
+savelocation = Tkinter.StringVar()
 
 Tkinter.Label(frame, text='Scaffold File').grid(row=0)
-Tkinter.Button(frame, text = "Browse", command = loadscaffname).grid(row=0, column=1)
+Tkinter.Button(frame, text = "Browse", command = loadscaffname).grid(row=0, column=1, sticky ='W', padx=15)
 Tkinter.Label(frame, text='Peak Table File').grid(row=1)
-Tkinter.Button(frame, text = "Browse", command = loadpeakname).grid(row=1, column=1)
+Tkinter.Button(frame, text = "Browse", command = loadpeakname).grid(row=1, column=1 , sticky ='W', padx=15)
+Tkinter.Button(frame, text = "Save Location", command = choosesavelocation).grid(row=7, column=0, padx=15)
+Tkinter.Label(frame, textvariable= df_scaff_name).grid(column = 2, row=0, sticky= 'W', columnspan=2)
+Tkinter.Label(frame, textvariable= peak_table_name).grid(column = 2, row=1, sticky= 'W', columnspan=2)
+Tkinter.Label(frame, textvariable= savelocation).grid(column = 1, row=7, sticky= 'W', columnspan=2)
 
 stdrow_tk = Tkinter.StringVar()
 stdcurveplate_tk = Tkinter.StringVar()
@@ -212,23 +221,23 @@ stdpeakname_tk = Tkinter.StringVar()
 filename_tk = Tkinter.StringVar()
 Tkinter.Label(frame, text='Standard Curve Info:').grid(row=2, columnspan=2, pady=6, sticky='W')
 displaygraph = Tkinter.BooleanVar()
-check = Tkinter.Checkbutton(tk, text='Display Curve Fit?', variable=displaygraph, onvalue=True, offvalue=False).grid(row=8, column = 0, sticky='E')
+check = Tkinter.Checkbutton(tk, text='Display Curve Fit', variable=displaygraph, onvalue=True, offvalue=False).grid(row=7, column = 0, sticky='W')
 
 Tkinter.Label(frame, text='Starting row').grid(row=3, sticky='W')
 stdrow_entry = Tkinter.Entry(frame, width=7, textvariable=stdrow_tk).grid(row=3, column=1, sticky='W')
 Tkinter.Label(frame, text='Plate').grid(row=4, sticky='W')
 stdcurveplate_entry = Tkinter.Entry(frame, width=7, textvariable=stdcurveplate_tk).grid(row=4, column=1, sticky='W')
 Tkinter.Label(frame, text='Peak name').grid(row=5, sticky='W')
-stdpeakname_entry = Tkinter.Entry(frame, width=7, textvariable=stdpeakname_tk).grid(row=5, column=1, sticky='W')
+stdpeakname_entry = Tkinter.Entry(frame, width=7, textvariable=stdpeakname_tk).grid(row=5, column=1, sticky='W', columnspan=2)
 
 Tkinter.Label(frame, text='File name').grid(row=6, sticky='W')
-filename_entry = Tkinter.Entry(frame, width=20, textvariable=filename_tk).grid(row=6, column=1, pady = 12, sticky='W')
+filename_entry = Tkinter.Entry(frame, width=20, textvariable=filename_tk).grid(row=6, column=1, pady = 12, sticky='W', columnspan=2)
 
 
-Tkinter.Button(frame, text="Calculate", command= close_window).grid(column=3, row=7, sticky='E')
+Tkinter.Button(frame, text="Calculate", command= close_window).grid(column=1, row=8,  pady = 12, sticky='W')
 
 tk.mainloop()
-
+os.chdir(savelocation.get())
 
 fname_raw = peak_table_name.get()
 df_raw = pd.read_csv(fname_raw, comment='#')
